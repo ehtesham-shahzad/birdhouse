@@ -1,11 +1,13 @@
-import { IsNotEmpty, IsNumber, IsString, MaxLength, MinLength } from "class-validator";
+import { IsLatitude, IsLongitude, IsNotEmpty, IsNumber, IsString, MaxLength, MinLength } from "class-validator";
 
 export class CreateBirdhouseRequestDto {
 
     @IsNumber()
+    @IsLongitude()
     longitude: number;
 
     @IsNumber()
+    @IsLatitude()
     latitude: number;
 
     @IsString()
