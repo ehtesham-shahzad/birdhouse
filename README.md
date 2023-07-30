@@ -74,3 +74,18 @@ Base minimum requirements have been completed
 ### Stage 2
 
 * Work on X-UBID middleware
+
+I have created an empty global list (which serves as in in-memory db) called `soldBirdhouses`. It gets filled when the application starts, and when new house gets registered.
+There is a loop hole: one can pass `x-ubid` for house A, but `ubid` in params can belong to house B.
+
+### Stage 3
+
+* After messaging Nick, I realized my original understanding was not correct. So, I have made some modifications:
+    * We have another entity called ResidenceHistory. This will keep track of when residency in a birdhouse changed, and also keep track of history
+    * Updated the create/post request to create both a birdhouse and its residence. There is a drawback to my approach: the query isn't transactional. So if the query to create residence fails, the birdhouse will still exist.
+    * Updating the updateOccupancy API. My life could have been a could have been a lot easier if 'id' and 'ubid' were the same. However, I am unsure if that is against the requirements.
+    * Updated the Get request as well
+    * Since I noticed all end points more or less return the same object, I decided to make a function called `birdhouseResponse` which takes in two variables, one of type `Birdhouse` and the other of type `ResidenceHistory`. This will help in cut down in number of lines of code.
+    * I was previously using an `if` condition to check if the incoming `ubid` was a valid `uuid`. But since, all `ubid`s have to pass through a middleware and only those that exist in our system are allowed to pass through, I decided to remove the `if` statement.
+    * During testing I noticed that `longitude` and `latitude` were not being propely saved, as typeorm would cut off any number after the decimal. I made some changes to the decorator in Birdhouse entity, taking code from here: `https://github.com/typeorm/typeorm/issues/873#issuecomment-424643086`
+    * 
