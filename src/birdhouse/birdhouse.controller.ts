@@ -34,4 +34,10 @@ export class BirdhouseController {
     return this.birdhouseService.updateOccupancy(ubid, updateOccupancyDto);
   }
 
+  @Get(':ubid/residence-history')
+  residenceHistory(@Param('ubid') ubid: string) {
+    this.logger.verbose(`Getting history of birdhouse residence for UBID ${ubid}`);
+    return this.birdhouseService.residenceHistory(ubid);
+  }
+
 }

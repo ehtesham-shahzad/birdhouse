@@ -94,3 +94,4 @@ There is a loop hole: one can pass `x-ubid` for house A, but `ubid` in params ca
 * Adding logs. I think this will be a simple task, hence I am doing it before the CRON job task, and the authentication task. 
 * I am using NestJS's built in Logger. But there has to be a better way.
 * There is a better way: Winston. Maybe I will use it next time on a larger application.
+* Also created an API which returns residence history.

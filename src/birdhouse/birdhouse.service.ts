@@ -201,4 +201,31 @@ export class BirdhouseService {
     return response;
   }
 
+  async residenceHistory(ubid: string) {
+
+    const [birdhouse, residenceHistory] = await Promise.all([
+      this.birdhouseRepository.findOne({
+        where: { ubid },
+        select: { name: true, latitude: true, longitude: true }
+      }),
+      this.residenceHistoryRepository.find({
+        where: { birdhouse: { ubid } },
+        select: {
+          eggs: true,
+          birds: true,
+          birdhouse: { id: false },
+          createdAt: true
+        },
+        relations: { birdhouse: true },
+        order: { createdAt: 'DESC' }
+      })
+    ]);
+
+    return {
+      birdhouse,
+      residenceHistory
+    };
+
+  }
+
 }
