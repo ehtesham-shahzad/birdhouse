@@ -1,25 +1,24 @@
 import { BaseEntity } from "src/base.entity";
-import { Column, Entity } from "typeorm";
+import { Column, Entity, Index, OneToMany } from "typeorm";
+import { ColumnNumericTransformer } from "utils/ColumnNumericTransformer";
+import { ResidenceHistory } from "./residence-history.entity";
 
 @Entity()
 export class Birdhouse extends BaseEntity {
 
     @Column({ nullable: false })
+    @Index()
     ubid: string;
 
-    @Column({ nullable: false })
+    @Column('numeric', { nullable: false, precision: 7, scale: 5, transformer: new ColumnNumericTransformer() })
     longitude: number;
 
-    @Column({ nullable: false })
+    @Column('numeric', { nullable: false, precision: 7, scale: 5, transformer: new ColumnNumericTransformer() })
     latitude: number;
 
     @Column({ nullable: false })
     name: string;
 
-    @Column({ default: 0 })
-    birds: number;
-
-    @Column({ default: 0 })
-    eggs: number;
-
+    @OneToMany(() => ResidenceHistory, residenceHistory => residenceHistory.birdhouse)
+    residenceHistory: ResidenceHistory[];
 }
