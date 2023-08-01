@@ -7,7 +7,7 @@ import { UpdateOccupancyDto } from './dto/update-occupancy.dto';
 @Controller('house')
 export class BirdhouseController {
 
-  private logger = new Logger('BirdhouseController');
+  private logger = new Logger(BirdhouseController.name);
 
   constructor(private readonly birdhouseService: BirdhouseService) { }
 

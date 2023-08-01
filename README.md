@@ -95,3 +95,15 @@ There is a loop hole: one can pass `x-ubid` for house A, but `ubid` in params ca
 * I am using NestJS's built in Logger. But there has to be a better way.
 * There is a better way: Winston. Maybe I will use it next time on a larger application.
 * Also created an API which returns residence history.
+
+* I do not fully understand "Each birdhouse has a registration number, only real registration numbers can talk with these endpoints. Registration numbers/birdhouses can be added in bulk to the API. (very simple authentication)"
+
+### Stage 5
+
+* Need to add cron job to prune birdhouses that have not received an update in a year. I haven't implemented a cron job before this, so it will be a good learning experience for me.
+* Following `https://docs.nestjs.com/techniques/task-scheduling`. Installing `npm install --save @nestjs/schedule` and `npm install --save-dev @types/cron`
+* Added a cron job function called `pruneOutdatedBirdhouses`. It runs once everyday at midnight.
+* I am getting a list of all birdhouses, grabbing their `id` and `updatedAt`.
+* Then I am calculating if difference between `updatedAt` and current date is more than 1 year (or 365 * 24 * 60 * 60 * 1000 milliseconds). If it is, then I add its `id` to a list. Then I go through `residenceHistory` table, find all entities that relate to the list of `id`s in list. Data is ordered by `createdAt` variable. Then I check the first entity and check again if the difference between `createdAt` and current date is more than 1 year, if so then I start purging data.
+* First I remove all entries from `residenceHistory`, then I delete from the `birdhouse` table.
+* I thought adding a cron job would be difficult, but it was simple and straight forward

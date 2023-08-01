@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,7 +17,7 @@ export const soldBirdhouses: string[] = [];
 @Injectable()
 export class BirdhouseService {
 
-  private logger = new Logger('BirdhouseService');
+  private logger = new Logger(BirdhouseService.name);
 
   constructor(
     @InjectRepository(Birdhouse) private readonly birdhouseRepository: Repository<Birdhouse>,
@@ -39,6 +40,46 @@ export class BirdhouseService {
           this.logger.error(error);
         });
     }
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async pruneOutdatedBirdhouses() {
+
+    const potentialPrune: string[] = [];
+
+    const birdhouse = await this.birdhouseRepository.find({ select: { id: true, updatedAt: true } });
+
+    const currentTime = new Date().getTime();
+    const oneYear = 365 * 24 * 60 * 60 * 1000;
+
+    for (let i = 0; i < birdhouse.length; i++) {
+      if (currentTime - birdhouse[i].updatedAt.getTime() > oneYear) {
+        potentialPrune.push(birdhouse[i].id);
+      }
+    }
+    this.logger.log('potentialPrune: ', potentialPrune);
+
+    for (let i = 0; i < potentialPrune.length; i++) {
+      const residenceHistory = await this.residenceHistoryRepository.find({
+        where: { birdhouse: { id: potentialPrune[i] } },
+        select: { id: true, createdAt: true, birdHouseId: true, birdhouse: { id: true } },
+        relations: { birdhouse: true },
+        order: { createdAt: 'DESC' }
+      });
+      this.logger.log('residenceHistory: ', residenceHistory);
+
+      if (currentTime - residenceHistory[0].createdAt.getTime() > oneYear) {
+
+        for (let j = 0; j < residenceHistory.length; j++) {
+          const deleteData = await this.residenceHistoryRepository.remove(residenceHistory[j]);
+          this.logger.log('deleteData: ', deleteData);
+        }
+
+        const deleteData = await this.birdhouseRepository.delete({ id: potentialPrune[i] });
+        this.logger.log('deleteData: ', deleteData);
+      }
+    }
+
   }
 
   async create(createBirdhouseDto: CreateBirdhouseRequestDto) {
