@@ -3,26 +3,33 @@
 ## Dependencies required
 
 * TypeORM
+* MySQL2
 * UUID generator (or maybe use crypto)
 * Class Validator
+* Class Transformer
+* @nestjs/schedule
+* @types/cron
 
 ## Steps
 * Setting up basic requirements
     * Endpoints
         * `/house` - POST
+        * `/house/bulk` - POST
         * `/house/<ubid>` - PATCH
         * `/house/<ubid>/occupancy` - POST
         * `/house/<ubid>` - GET
     * Entity
-        * id
-        * ubid
-        * log, lat
-        * birds
-        * eggs
+        * Birdhouse
+            * ubid
+            * log
+            * lat
+        * ResidenceHistory
+            * birds
+            * eggs
 
 ## Task 1: Save bird house
-* Generate UUID for ID
-* Generate UUID for UBID
+* Generate `UUID` for `ID`
+* Generate `UUID` for `UBID`
 * Store log and lat
 * Trigger TypeORM function to create
 * Surround typeorm create with `try` `catch` block
