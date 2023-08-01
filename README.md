@@ -107,3 +107,11 @@ There is a loop hole: one can pass `x-ubid` for house A, but `ubid` in params ca
 * Then I am calculating if difference between `updatedAt` and current date is more than 1 year (or 365 * 24 * 60 * 60 * 1000 milliseconds). If it is, then I add its `id` to a list. Then I go through `residenceHistory` table, find all entities that relate to the list of `id`s in list. Data is ordered by `createdAt` variable. Then I check the first entity and check again if the difference between `createdAt` and current date is more than 1 year, if so then I start purging data.
 * First I remove all entries from `residenceHistory`, then I delete from the `birdhouse` table.
 * I thought adding a cron job would be difficult, but it was simple and straight forward
+
+### Stage 6
+
+* I forgot about bulk add. 
+* I created a new api end point, added to list of excluded routes
+* It is using the implemted create service in a `for` loop
+* Since the incoming data is an array, the existing decorator will not work. I can pass an `@IsArray` decorator and then pass it some object validation, but for not I have added a few `if` conditions in my service to handle it.
+* Pushing all results in an array and returning it

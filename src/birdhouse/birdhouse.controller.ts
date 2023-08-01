@@ -17,6 +17,12 @@ export class BirdhouseController {
     return this.birdhouseService.create(createBirdhouseDto);
   }
 
+  @Post('bulk')
+  createInBulk(@Body() createBirdhousesDto: CreateBirdhouseRequestDto[]) {
+    this.logger.verbose(`Creating new birdhouse with data ${JSON.stringify(createBirdhousesDto)}`);
+    return this.birdhouseService.createInBulk(createBirdhousesDto);
+  }
+
   @Get(':ubid')
   async findOne(@Param('ubid') ubid: string) {
     this.logger.verbose(`Finding a birdhouse against ubid: ${ubid}`);

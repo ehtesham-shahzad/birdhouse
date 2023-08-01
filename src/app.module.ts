@@ -24,6 +24,10 @@ export class AppModule implements NestModule {
         path: 'house',
         method: RequestMethod.POST
       })
+      .exclude({
+        path: 'house/bulk',
+        method: RequestMethod.POST
+      })
       .forRoutes({
         path: '*',
         method: RequestMethod.ALL

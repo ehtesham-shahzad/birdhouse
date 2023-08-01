@@ -1,6 +1,7 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotAcceptableException, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
+import { isLatitude, isLongitude, isString } from 'class-validator';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateBirdhouseRequestDto } from './dto/create-birdhouse-request.dto';
@@ -115,6 +116,26 @@ export class BirdhouseService {
 
     return this.birdhouseResponse(saveBirdhouse, savedResidenceHistory);
 
+  }
+
+  async createInBulk(createBirdhousesDto: CreateBirdhouseRequestDto[]) {
+
+    for (let i = 0; i < createBirdhousesDto.length; i++) {
+      if (!isString(createBirdhousesDto[i].name) || createBirdhousesDto[i].name.length < 4 || createBirdhousesDto[i].name.length > 16) {
+        throw new NotAcceptableException();
+      }
+
+      if (!isLatitude(createBirdhousesDto[i].latitude.toString()) || !isLongitude(createBirdhousesDto[i].longitude.toString())) {
+        throw new NotAcceptableException();
+      }
+    }
+
+    const createInBulk: CreateBirdhouseResponseDto[] = [];
+    for (let i = 0; i < createBirdhousesDto.length; i++) {
+      createInBulk.push(await this.create(createBirdhousesDto[i]));
+    }
+
+    return createInBulk;
   }
 
   async update(ubid: string, updateBirdhouseDto: UpdateBirdhouseDto) {
