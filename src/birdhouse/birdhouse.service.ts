@@ -1,9 +1,8 @@
 import { Injectable, Logger, NotAcceptableException, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { InjectRepository } from '@nestjs/typeorm';
 import { isLatitude, isLongitude, isString } from 'class-validator';
-import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+import { BirdhouseRepository } from './birdhouse.repository';
 import { CreateBirdhouseRequestDto } from './dto/create-birdhouse-request.dto';
 import { CreateBirdhouseResponseDto } from './dto/create-birdhouse-response.dto';
 import { UpdateBirdhouseDto } from './dto/update-birdhouse.dto';
@@ -20,15 +19,12 @@ export class BirdhouseService {
 
   private logger = new Logger(BirdhouseService.name);
 
-  constructor(
-    @InjectRepository(Birdhouse) private readonly birdhouseRepository: Repository<Birdhouse>,
-    @InjectRepository(ResidenceHistory) private readonly residenceHistoryRepository: Repository<ResidenceHistory>,
-  ) { }
+  constructor(private readonly birdhouseRepository: BirdhouseRepository) { }
 
   onModuleInit() {
     if (soldBirdhouses.length === 0) {
       this.logger.log('Getting list of UBIDs');
-      this.birdhouseRepository.find({ select: { ubid: true } })
+      this.birdhouseRepository.getBirdhouseUbids()
         .then(res => {
           this.logger.verbose(`List of UBIDs: ${JSON.stringify(res)}`)
           this.logger.log('Setting UBIDs in in-memory storage');
@@ -48,7 +44,7 @@ export class BirdhouseService {
 
     const potentialPrune: string[] = [];
 
-    const birdhouse = await this.birdhouseRepository.find({ select: { id: true, updatedAt: true } });
+    const birdhouse = await this.birdhouseRepository.getBirdhouseIdsUpdatedAt();
 
     const currentTime = new Date().getTime();
     const oneYear = 365 * 24 * 60 * 60 * 1000;
@@ -61,22 +57,17 @@ export class BirdhouseService {
     this.logger.log('potentialPrune: ', potentialPrune);
 
     for (let i = 0; i < potentialPrune.length; i++) {
-      const residenceHistory = await this.residenceHistoryRepository.find({
-        where: { birdhouse: { id: potentialPrune[i] } },
-        select: { id: true, createdAt: true, birdHouseId: true, birdhouse: { id: true } },
-        relations: { birdhouse: true },
-        order: { createdAt: 'DESC' }
-      });
+      const residenceHistory = await this.birdhouseRepository.findRHIdCreatedAtByBirdhouseId(potentialPrune[i]);
       this.logger.log('residenceHistory: ', residenceHistory);
 
       if (currentTime - residenceHistory[0].createdAt.getTime() > oneYear) {
 
         for (let j = 0; j < residenceHistory.length; j++) {
-          const deleteData = await this.residenceHistoryRepository.remove(residenceHistory[j]);
+          const deleteData = await this.birdhouseRepository.removeResidenceHistory(residenceHistory[j]);
           this.logger.log('deleteData: ', deleteData);
         }
 
-        const deleteData = await this.birdhouseRepository.delete({ id: potentialPrune[i] });
+        const deleteData = await this.birdhouseRepository.deleteBirdhouseById(potentialPrune[i]);
         this.logger.log('deleteData: ', deleteData);
       }
     }
@@ -101,10 +92,10 @@ export class BirdhouseService {
     let saveBirdhouse: Birdhouse;
     let savedResidenceHistory: ResidenceHistory;
     try {
-      saveBirdhouse = await this.birdhouseRepository.save(birdhouse);
+      saveBirdhouse = await this.birdhouseRepository.saveBirdhouse(birdhouse);
       this.logger.verbose(`Birdhouse saved: ${JSON.stringify(savedResidenceHistory)}`);
 
-      savedResidenceHistory = await this.residenceHistoryRepository.save(residenceHistory);
+      savedResidenceHistory = await this.birdhouseRepository.saveResidenceHistory(residenceHistory);
       this.logger.verbose(`ResidenceHistory saved: ${JSON.stringify(savedResidenceHistory)}`);
     } catch (error) {
       this.logger.error(error);
@@ -145,7 +136,7 @@ export class BirdhouseService {
       throw new EmptyObjectException();
     }
 
-    const birdhouse = await this.birdhouseRepository.findOne({ where: { ubid }, select: { id: true } });
+    const birdhouse = await this.birdhouseRepository.findBirdhouseIdByUbid(ubid);
 
     if (!birdhouse) {
       this.logger.error('Birdhouse not found');
@@ -155,7 +146,7 @@ export class BirdhouseService {
     updateBirdhouseDto.updatedAt = new Date();
 
     try {
-      const update = await this.birdhouseRepository.update(birdhouse.id, updateBirdhouseDto);
+      const update = await this.birdhouseRepository.updateBirdhouse(birdhouse.id, updateBirdhouseDto);
       this.logger.verbose(`Birdhouse updated: ${JSON.stringify(update)}`);
     } catch (error) {
       this.logger.error(error);
@@ -164,15 +155,8 @@ export class BirdhouseService {
 
     this.logger.log('Retrieving updated results');
     const [updatedResult, residenceHistory] = await Promise.all([
-      this.birdhouseRepository.findOne({
-        where: { id: birdhouse.id },
-        select: { longitude: true, latitude: true, name: true }
-      }),
-      this.residenceHistoryRepository.findOne({
-        where: { birdHouseId: birdhouse.id },
-        select: { birds: true, eggs: true, createdAt: true },
-        order: { createdAt: 'DESC' },
-      }),
+      this.birdhouseRepository.findBirdhouseNameLocationById(birdhouse.id),
+      this.birdhouseRepository.findRHBirdsEggsCreatedAtByBirdhouseId(birdhouse.id),
     ]);
 
     return this.birdhouseResponse(updatedResult, residenceHistory);
@@ -186,7 +170,8 @@ export class BirdhouseService {
       throw new EmptyObjectException();
     }
 
-    const residenceHistory = await this.findResidenceHistory(ubid);
+    this.logger.log('Finding birdhouse and recent residence history');
+    const residenceHistory = await this.birdhouseRepository.findRHIdBirdsEggsCreatedAtBirdhouseIdNameLocationByUbid(ubid);
 
     if (!residenceHistory) {
       this.logger.error(`Birdhouse not found`);
@@ -201,7 +186,7 @@ export class BirdhouseService {
     this.logger.log(`ResidenceHistory object created`);
 
     try {
-      const update = await this.residenceHistoryRepository.save(updateResidenceHistory);
+      const update = await this.birdhouseRepository.saveResidenceHistory(updateResidenceHistory);
       this.logger.verbose(`Updating residance history. New data: ${JSON.stringify(update)}`);
     } catch (error) {
       this.logger.error(error);
@@ -213,7 +198,8 @@ export class BirdhouseService {
   }
 
   async findOne(ubid: string) {
-    const residenceHistory = await this.findResidenceHistory(ubid);
+    this.logger.log('Finding birdhouse and recent residence history');
+    const residenceHistory = await this.birdhouseRepository.findRHIdBirdsEggsCreatedAtBirdhouseIdNameLocationByUbid(ubid);
 
     if (!residenceHistory) {
       this.logger.error(`Birdhouse not found`);
@@ -221,25 +207,6 @@ export class BirdhouseService {
     }
 
     return this.birdhouseResponse(residenceHistory.birdhouse, residenceHistory);
-  }
-
-  async findResidenceHistory(ubid: string) {
-    this.logger.log('Finding birdhouse and recent residence history');
-    const residenceHistory = await this.residenceHistoryRepository.findOne({
-      where: { birdhouse: { ubid } },
-      select: {
-        id: true,
-        birds: true,
-        eggs: true,
-        createdAt: true,
-        birdHouseId: true,
-        birdhouse: { latitude: true, longitude: true, name: true }
-      },
-      relations: { birdhouse: true },
-      order: { createdAt: 'DESC' }
-    });
-
-    return residenceHistory;
   }
 
   async birdhouseResponse(birdhouse: Birdhouse, residenceHistory: ResidenceHistory) {
@@ -266,21 +233,8 @@ export class BirdhouseService {
   async residenceHistory(ubid: string) {
 
     const [birdhouse, residenceHistory] = await Promise.all([
-      this.birdhouseRepository.findOne({
-        where: { ubid },
-        select: { name: true, latitude: true, longitude: true }
-      }),
-      this.residenceHistoryRepository.find({
-        where: { birdhouse: { ubid } },
-        select: {
-          eggs: true,
-          birds: true,
-          birdhouse: { id: false },
-          createdAt: true
-        },
-        relations: { birdhouse: true },
-        order: { createdAt: 'DESC' }
-      })
+      this.birdhouseRepository.findBirdhouseIdByUbid(ubid),
+      this.birdhouseRepository.findRHBirdsEggsCreatedAtBirdhouseByUbid(ubid)
     ]);
 
     return {
