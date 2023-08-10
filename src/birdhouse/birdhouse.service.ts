@@ -2,7 +2,6 @@ import { Injectable, Logger, NotAcceptableException, NotFoundException } from '@
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { isLatitude, isLongitude, isString } from 'class-validator';
 import { v4 as uuidv4 } from 'uuid';
-import { BirdhouseRepository } from './birdhouse.repository';
 import { CreateBirdhouseRequestDto } from './dto/create-birdhouse-request.dto';
 import { CreateBirdhouseResponseDto } from './dto/create-birdhouse-response.dto';
 import { UpdateBirdhouseDto } from './dto/update-birdhouse.dto';
@@ -12,6 +11,8 @@ import { ResidenceHistory } from './entities/residence-history.entity';
 import { EmptyObjectException } from './exceptions/EmptyObject.exception';
 import { RegistractionFailedException } from './exceptions/RegistrationFailed.exception';
 import { UpdateFailedException } from './exceptions/UpdateFailed.exception';
+import { BirdhouseRepository } from './repositories/birdhouse.repository';
+import { ResidenceHistoryRepository } from './repositories/residenceHistory.repository';
 
 export const soldBirdhouses: string[] = [];
 @Injectable()
@@ -19,7 +20,10 @@ export class BirdhouseService {
 
   private logger = new Logger(BirdhouseService.name);
 
-  constructor(private readonly birdhouseRepository: BirdhouseRepository) { }
+  constructor(
+    private readonly birdhouseRepository: BirdhouseRepository,
+    private readonly residenceHistoryRepository: ResidenceHistoryRepository,
+  ) { }
 
   onModuleInit() {
     if (soldBirdhouses.length === 0) {
@@ -57,13 +61,13 @@ export class BirdhouseService {
     this.logger.log('potentialPrune: ', potentialPrune);
 
     for (let i = 0; i < potentialPrune.length; i++) {
-      const residenceHistory = await this.birdhouseRepository.findRHIdCreatedAtByBirdhouseId(potentialPrune[i]);
+      const residenceHistory = await this.residenceHistoryRepository.findRHIdCreatedAtByBirdhouseId(potentialPrune[i]);
       this.logger.log('residenceHistory: ', residenceHistory);
 
       if (currentTime - residenceHistory[0].createdAt.getTime() > oneYear) {
 
         for (let j = 0; j < residenceHistory.length; j++) {
-          const deleteData = await this.birdhouseRepository.removeResidenceHistory(residenceHistory[j]);
+          const deleteData = await this.residenceHistoryRepository.removeResidenceHistory(residenceHistory[j]);
           this.logger.log('deleteData: ', deleteData);
         }
 
@@ -95,7 +99,7 @@ export class BirdhouseService {
       saveBirdhouse = await this.birdhouseRepository.saveBirdhouse(birdhouse);
       this.logger.verbose(`Birdhouse saved: ${JSON.stringify(savedResidenceHistory)}`);
 
-      savedResidenceHistory = await this.birdhouseRepository.saveResidenceHistory(residenceHistory);
+      savedResidenceHistory = await this.residenceHistoryRepository.saveResidenceHistory(residenceHistory);
       this.logger.verbose(`ResidenceHistory saved: ${JSON.stringify(savedResidenceHistory)}`);
     } catch (error) {
       this.logger.error(error);
@@ -156,7 +160,7 @@ export class BirdhouseService {
     this.logger.log('Retrieving updated results');
     const [updatedResult, residenceHistory] = await Promise.all([
       this.birdhouseRepository.findBirdhouseNameLocationById(birdhouse.id),
-      this.birdhouseRepository.findRHBirdsEggsCreatedAtByBirdhouseId(birdhouse.id),
+      this.residenceHistoryRepository.findRHBirdsEggsCreatedAtByBirdhouseId(birdhouse.id),
     ]);
 
     return this.birdhouseResponse(updatedResult, residenceHistory);
@@ -171,7 +175,7 @@ export class BirdhouseService {
     }
 
     this.logger.log('Finding birdhouse and recent residence history');
-    const residenceHistory = await this.birdhouseRepository.findRHIdBirdsEggsCreatedAtBirdhouseIdNameLocationByUbid(ubid);
+    const residenceHistory = await this.residenceHistoryRepository.findRHIdBirdsEggsCreatedAtBirdhouseIdNameLocationByUbid(ubid);
 
     if (!residenceHistory) {
       this.logger.error(`Birdhouse not found`);
@@ -186,7 +190,7 @@ export class BirdhouseService {
     this.logger.log(`ResidenceHistory object created`);
 
     try {
-      const update = await this.birdhouseRepository.saveResidenceHistory(updateResidenceHistory);
+      const update = await this.residenceHistoryRepository.saveResidenceHistory(updateResidenceHistory);
       this.logger.verbose(`Updating residance history. New data: ${JSON.stringify(update)}`);
     } catch (error) {
       this.logger.error(error);
@@ -199,7 +203,7 @@ export class BirdhouseService {
 
   async findOne(ubid: string) {
     this.logger.log('Finding birdhouse and recent residence history');
-    const residenceHistory = await this.birdhouseRepository.findRHIdBirdsEggsCreatedAtBirdhouseIdNameLocationByUbid(ubid);
+    const residenceHistory = await this.residenceHistoryRepository.findRHIdBirdsEggsCreatedAtBirdhouseIdNameLocationByUbid(ubid);
 
     if (!residenceHistory) {
       this.logger.error(`Birdhouse not found`);
@@ -234,7 +238,7 @@ export class BirdhouseService {
 
     const [birdhouse, residenceHistory] = await Promise.all([
       this.birdhouseRepository.findBirdhouseIdByUbid(ubid),
-      this.birdhouseRepository.findRHBirdsEggsCreatedAtBirdhouseByUbid(ubid)
+      this.residenceHistoryRepository.findRHBirdsEggsCreatedAtBirdhouseByUbid(ubid)
     ]);
 
     return {

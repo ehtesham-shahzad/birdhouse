@@ -1,6 +1,6 @@
-import { BaseEntity } from "src/base.entity";
 import { Column, Entity, Index, OneToMany } from "typeorm";
-import { ColumnNumericTransformer } from "utils/ColumnNumericTransformer";
+import { ColumnNumericTransformer } from "../../../utils/ColumnNumericTransformer";
+import { BaseEntity } from "../../base.entity";
 import { ResidenceHistory } from "./residence-history.entity";
 
 @Entity()

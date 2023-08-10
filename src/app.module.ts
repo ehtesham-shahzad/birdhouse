@@ -20,14 +20,16 @@ import { config } from './orm.config';
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(AuthenticateBirdhouseMiddleware)
-      .exclude({
-        path: 'house',
-        method: RequestMethod.POST
-      })
-      .exclude({
-        path: 'house/bulk',
-        method: RequestMethod.POST
-      })
+      .exclude(
+        {
+          path: 'house',
+          method: RequestMethod.POST
+        },
+        {
+          path: 'house/bulk',
+          method: RequestMethod.POST
+        }
+      )
       .forRoutes({
         path: '*',
         method: RequestMethod.ALL

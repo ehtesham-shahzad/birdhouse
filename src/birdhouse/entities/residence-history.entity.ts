@@ -1,5 +1,5 @@
-import { BaseEntity } from "src/base.entity";
 import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
+import { BaseEntity } from "../../base.entity";
 import { Birdhouse } from "./birdhouse.entity";
 
 @Entity()
