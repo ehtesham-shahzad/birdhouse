@@ -122,3 +122,16 @@ There is a loop hole: one can pass `x-ubid` for house A, but `ubid` in params ca
 * It is using the implemted create service in a `for` loop
 * Since the incoming data is an array, the existing decorator will not work. I can pass an `@IsArray` decorator and then pass it some object validation, but for not I have added a few `if` conditions in my service to handle it.
 * Pushing all results in an array and returning it
+
+### Stage 7
+
+* Instead of directly injecting both birdhouse repository and residence history repository into the birdhouse service, I have made them into two different repository classes. This will allow me to write a query once and call it multiple times. And will help to decrease the lines of code in the birdhouse service. I have then injected those classes into my birdhouse service. I first learned this pattern in Spring Boot, and I have seen this approach being used in a handful of NestJS code bases (not most of them).
+* I have added two functions into my service called `createBirdhouseObj` and `createResidenceHistoryObj`. So I can used test these functions instead of unit testing functions with TypeORM calls. Unit testing those functions would be pointless as unit testing won't make the DB calls
+* Creating these two functions has also helped me further reduce repetition
+
+### Stage 8
+
+* Writing test cases. It has been a confusing journey. Especially when it comes to making DB calls. I asked a friend about writing tests, and he told me that in unit tests, you don't make DB calls, but instead test other parts of your code to see if they are returning the result you expect it to return. For DB calls, you have to write integration tests or end-to-end tests.
+* Struggling to find a proper guide that could help me catch up to writing test cases, I turned to ChatGPT to help me write test cases. Do I understand how the tests are written? Somewhat. But I still need to do a proper course/crash course to better understand how to write unit tests, integration tests, and end-to-end tests. And when to use which testing strategy
+* Test cases in `service.spec.ts` mostly focus on functions without DB calls
+* Test cases in `controller.spec.ts` covers all function. But I am not sure how useful those test cases are, and if they will truly help in catching bugs
