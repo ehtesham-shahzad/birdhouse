@@ -80,18 +80,8 @@ export class BirdhouseService {
 
   async create(createBirdhouseDto: CreateBirdhouseRequestDto) {
 
-    const birdhouse = new Birdhouse();
-    birdhouse.id = uuidv4();
-    birdhouse.ubid = uuidv4();
-    birdhouse.name = createBirdhouseDto.name;
-    birdhouse.longitude = createBirdhouseDto.longitude;
-    birdhouse.latitude = createBirdhouseDto.latitude;
-    this.logger.log(`Birdhouse object created`);
-
-    const residenceHistory = new ResidenceHistory();
-    residenceHistory.id = uuidv4();
-    residenceHistory.birdHouseId = birdhouse.id;
-    this.logger.log(`ResidenceHistory object created`);
+    const birdhouse = this.createBirdhouseObj(createBirdhouseDto);
+    const residenceHistory = this.createResidenceHistoryObj(birdhouse.id);
 
     let saveBirdhouse: Birdhouse;
     let savedResidenceHistory: ResidenceHistory;
@@ -113,8 +103,28 @@ export class BirdhouseService {
 
   }
 
-  async createInBulk(createBirdhousesDto: CreateBirdhouseRequestDto[]) {
+  createBirdhouseObj(createBirdhouseDto: CreateBirdhouseRequestDto) {
+    const birdhouse = new Birdhouse();
+    birdhouse.id = uuidv4();
+    birdhouse.ubid = uuidv4();
+    birdhouse.name = createBirdhouseDto.name;
+    birdhouse.longitude = createBirdhouseDto.longitude;
+    birdhouse.latitude = createBirdhouseDto.latitude;
+    this.logger.log(`Birdhouse object created`);
+    return birdhouse;
+  }
 
+  createResidenceHistoryObj(birdhouseId: string, birds = 0, eggs = 0) {
+    const residenceHistory = new ResidenceHistory();
+    residenceHistory.id = uuidv4();
+    residenceHistory.birdHouseId = birdhouseId;
+    residenceHistory.birds = birds;
+    residenceHistory.eggs = eggs;
+    this.logger.log(`ResidenceHistory object created`);
+    return residenceHistory;
+  }
+
+  async createInBulk(createBirdhousesDto: CreateBirdhouseRequestDto[]) {
     for (let i = 0; i < createBirdhousesDto.length; i++) {
       if (!isString(createBirdhousesDto[i].name) || createBirdhousesDto[i].name.length < 4 || createBirdhousesDto[i].name.length > 16) {
         throw new NotAcceptableException();
@@ -182,19 +192,18 @@ export class BirdhouseService {
       throw new NotFoundException(`Birdhouse with ubid ${ubid} not found`);
     }
 
-    const updateResidenceHistory = new ResidenceHistory();
-    updateResidenceHistory.id = uuidv4();
-    updateResidenceHistory.birdHouseId = residenceHistory.birdHouseId;
-    updateResidenceHistory.birds = updateOccupancyDto.birds ? updateOccupancyDto.birds : residenceHistory.birds;
-    updateResidenceHistory.eggs = updateOccupancyDto.eggs ? updateOccupancyDto.eggs : residenceHistory.eggs;
-    this.logger.log(`ResidenceHistory object created`);
+    const updateResidenceHistory = this.createResidenceHistoryObj(
+      residenceHistory.birdHouseId,
+      updateOccupancyDto.birds ? updateOccupancyDto.birds : residenceHistory.birds,
+      updateOccupancyDto.eggs ? updateOccupancyDto.eggs : residenceHistory.eggs
+    );
 
     try {
       const update = await this.residenceHistoryRepository.saveResidenceHistory(updateResidenceHistory);
       this.logger.verbose(`Updating residance history. New data: ${JSON.stringify(update)}`);
     } catch (error) {
       this.logger.error(error);
-      throw new UpdateFailedException()
+      throw new UpdateFailedException();
     }
 
     return this.birdhouseResponse(residenceHistory.birdhouse, updateResidenceHistory);
@@ -213,7 +222,7 @@ export class BirdhouseService {
     return this.birdhouseResponse(residenceHistory.birdhouse, residenceHistory);
   }
 
-  async birdhouseResponse(birdhouse: Birdhouse, residenceHistory: ResidenceHistory) {
+  birdhouseResponse(birdhouse: Birdhouse, residenceHistory: ResidenceHistory) {
 
     this.logger.log(`Create a response object`);
     const response = new CreateBirdhouseResponseDto();
@@ -229,7 +238,7 @@ export class BirdhouseService {
     response.birds = residenceHistory.birds;
     response.eggs = residenceHistory.eggs;
 
-    this.logger.verbose(`Returning response: ${response}`);
+    this.logger.verbose(`Returning response: ${JSON.stringify(response)}`);
 
     return response;
   }
